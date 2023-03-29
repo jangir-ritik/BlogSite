@@ -9,7 +9,7 @@ function CreatePost() {
   const [content, setContent ] = useState('')
   const [files, setFiles] = useState('')
   const [redirect, setRedirect] = useState(false)
-  
+
   async function createNewPost(e) {
     e.preventDefault()
     const data = new FormData();

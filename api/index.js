@@ -80,7 +80,10 @@ app.post('/post', uploadMiddleware.single('files'), async (req, res) => {
     })
 
     res.json(postDoc)
+})
 
+app.get('/post', async (req, res) => {
+    res.json(await Post.find())
 })
 
 app.listen('4000')
