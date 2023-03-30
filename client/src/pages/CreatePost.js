@@ -17,9 +17,11 @@ function CreatePost() {
     data.set('summary', summary)
     data.set('content', content)
     data.set('files', files[0])
+    console.log(files, "----- inside files")
     const response = await fetch('http://localhost:4000/post', {
       method: 'POST',
       body: data,
+      credentials: 'include',
     })
     if (response.ok) {
       setRedirect(true) 

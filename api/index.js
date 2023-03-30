@@ -7,13 +7,15 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const cookieParser = require('cookie-parser')
 const multer = require('multer')
-const uploadMiddleware = multer({ dest: 'uploads/ ' })
+const uploadMiddleware = multer({ dest: 'uploads' })
 const fs = require('fs')
 const Post = require('./models/Post')
+const unorm = require('unorm');
 
 app.use(cors({ credentials: true, origin: 'http://localhost:3000' }))
 app.use(express.json())
 app.use(cookieParser())
+app.use('/uploads', express.static(__dirname + '/uploads'))
 
 const salt = bcrypt.genSaltSync(10);
 const secret = 'sdffewe'
@@ -69,21 +71,33 @@ app.post('/logout', (req, res) => {
 
 app.post('/post', uploadMiddleware.single('files'), async (req, res) => {
     const { originalname, path } = req.file;
+    console.log(path, " :------------ path")
     const parts = originalname.split('.')
     const ext = parts[parts.length - 1]
-    const newPath = path + '.' + ext
+    const normalizedPath = unorm.nfc(path);
+    // const newPath = path + '.' + ext
+    const newPath = `${normalizedPath}.${ext}`;
     fs.renameSync(path, newPath);
 
-    const { title, content, summary} = req.body;
-    const postDoc = await Post.create({
-        title, summary, content, cover: newPath
-    })
+    const { token } = req.cookies
 
-    res.json(postDoc)
+    jwt.verify(token, secret, {}, async (err, info) => {
+        if (err) throw err;
+
+        const { title, content, summary } = req.body;
+        const postDoc = await Post.create({
+            title, summary, content, cover: newPath, author: info.id,
+        })
+
+        res.json(postDoc)
+    })
 })
 
 app.get('/post', async (req, res) => {
-    res.json(await Post.find())
+    res.json(await Post.find()
+    .populate('author', ['username'])
+    .sort({craetedAt: -1})
+    .limit(20))
 })
 
 app.listen('4000')
