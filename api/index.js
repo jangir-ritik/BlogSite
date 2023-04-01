@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require("express")
 const mongoose = require('mongoose')
 const User = require('./models/User')
@@ -17,12 +19,17 @@ app.use(express.json())
 app.use(cookieParser())
 app.use('/uploads', express.static(__dirname + '/uploads'))
 
+const JWT_SECRET = process.env.JWT_SECRET;
+const PORT = process.env.PORT || 4000;
+const MONGODB_URI = process.env.MONGODB_URI;
+
 const salt = bcrypt.genSaltSync(10);
-const secret = 'sdffewe'
+const secret = JWT_SECRET
 
 console.log('connecting to the db...')
-mongoose.connect('mongodb+srv://jangirritik06:67QF99Lq@cluster0.3uhimfv.mongodb.net/?retryWrites=true&w=majority')
-console.log('db connected.')
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('db connected.'))
+  .catch(err => console.error('error connecting to the db:', err));
 
 app.post('/register', async (req, res) => {
     const { username, password } = req.body
@@ -30,39 +37,54 @@ app.post('/register', async (req, res) => {
         const userDoc = await User.create({ username, password: bcrypt.hashSync(password, salt) })
         res.status(200).json(userDoc)
     } catch (error) {
-        res.status(400).json(error)
+        console.error('error in /register:', error);
+    res.status(400).json({ error: error.message });
     }
 })
 
 app.post('/login', async (req, res) => {
     const { username, password } = req.body
-    // try {
+    try {
     const userDoc = await User.findOne({ username })
+    if (!userDoc) throw new Error('User not found');
     const passOk = bcrypt.compareSync(password, userDoc.password)
     if (passOk) {
         //     res.json('Login successful')
         jwt.sign({ username, id: userDoc._id }, secret, {}, (err, token) => {
-            if (err) throw err;
-            res.cookie('token', token, {
-                sameSite: 'none',
-                secure: true
-            }).json({
-                id: userDoc._id,
-                username,
-            });
+            if (err) {
+                console.error('error in /login (jwt.sign):', err);
+                res.status(500).json({ error: 'Internal server error' });
+              } else {
+                res.cookie('token', token, {
+                  sameSite: 'none',
+                  secure: true
+                }).json({
+                  id: userDoc._id,
+                  username,
+                });
+              }
         })
     } else {
         res.status(400).json('wrong credentials')
     }
-})
+}
+catch (error) {
+    console.error('error in /login:', error);
+    res.status(400).json({ error: error.message });
+  }
+}
+)
 
 app.get('/profile', (req, res) => {
     const { token } = req.cookies;
     jwt.verify(token, secret, {}, (err, info) => {
-        if (err) throw err;
-        res.json(info)
+        if (err) {
+            console.error('error in /profile (jwt.verify):', err);
+            res.status(400).json({ error: 'Invalid token' });
+          } else {
+            res.json(info);
+          }
     })
-    // res.json(req.cookies)
 })
 
 app.post('/logout', (req, res) => {
@@ -71,11 +93,9 @@ app.post('/logout', (req, res) => {
 
 app.post('/post', uploadMiddleware.single('files'), async (req, res) => {
     const { originalname, path } = req.file;
-    console.log(path, " :------------ path")
     const parts = originalname.split('.')
     const ext = parts[parts.length - 1]
     const normalizedPath = unorm.nfc(path);
-    // const newPath = path + '.' + ext
     const newPath = `${normalizedPath}.${ext}`;
     fs.renameSync(path, newPath);
 
@@ -105,6 +125,6 @@ app.get('/post/:id', async (req, res) => {
     res.json(postDetail)
 })
 
-app.listen('4000')
+app.listen(PORT)
 
 console.log('listening to port 4000')
