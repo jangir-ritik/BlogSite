@@ -2,7 +2,7 @@
     "name": "blogSite",
     "version": "1.0.0",
     "scripts": {
-      "start": "cd client && npm install && npm run build && cd ../api && npm install && npm start"
+      "start": "cd client && npm install && npm run build && cd ../api && npm install && node index.js"
     }
   }
   
