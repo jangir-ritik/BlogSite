@@ -28,8 +28,13 @@ const secret = JWT_SECRET
 
 console.log('connecting to the db...')
 mongoose.connect(MONGODB_URI)
-  .then(() => console.log('db connected.'))
-  .catch(err => console.error('error connecting to the db:', err));
+    .then(() => {
+        console.log('db connected.')
+
+        app.listen(PORT)
+        console.log('listening to port 4000')
+    })
+    .catch(err => console.error('error connecting to the db:', err));
 
 app.post('/register', async (req, res) => {
     const { username, password } = req.body
@@ -38,40 +43,40 @@ app.post('/register', async (req, res) => {
         res.status(200).json(userDoc)
     } catch (error) {
         console.error('error in /register:', error);
-    res.status(400).json({ error: error.message });
+        res.status(400).json({ error: error.message });
     }
 })
 
 app.post('/login', async (req, res) => {
     const { username, password } = req.body
     try {
-    const userDoc = await User.findOne({ username })
-    if (!userDoc) throw new Error('User not found');
-    const passOk = bcrypt.compareSync(password, userDoc.password)
-    if (passOk) {
-        //     res.json('Login successful')
-        jwt.sign({ username, id: userDoc._id }, secret, {}, (err, token) => {
-            if (err) {
-                console.error('error in /login (jwt.sign):', err);
-                res.status(500).json({ error: 'Internal server error' });
-              } else {
-                res.cookie('token', token, {
-                  sameSite: 'none',
-                  secure: true
-                }).json({
-                  id: userDoc._id,
-                  username,
-                });
-              }
-        })
-    } else {
-        res.status(400).json('wrong credentials')
+        const userDoc = await User.findOne({ username })
+        if (!userDoc) throw new Error('User not found');
+        const passOk = bcrypt.compareSync(password, userDoc.password)
+        if (passOk) {
+            //     res.json('Login successful')
+            jwt.sign({ username, id: userDoc._id }, secret, {}, (err, token) => {
+                if (err) {
+                    console.error('error in /login (jwt.sign):', err);
+                    res.status(500).json({ error: 'Internal server error' });
+                } else {
+                    res.cookie('token', token, {
+                        sameSite: 'none',
+                        secure: true
+                    }).json({
+                        id: userDoc._id,
+                        username,
+                    });
+                }
+            })
+        } else {
+            res.status(400).json('wrong credentials')
+        }
     }
-}
-catch (error) {
-    console.error('error in /login:', error);
-    res.status(400).json({ error: error.message });
-  }
+    catch (error) {
+        console.error('error in /login:', error);
+        res.status(400).json({ error: error.message });
+    }
 }
 )
 
@@ -81,9 +86,9 @@ app.get('/profile', (req, res) => {
         if (err) {
             console.error('error in /profile (jwt.verify):', err);
             res.status(400).json({ error: 'Invalid token' });
-          } else {
+        } else {
             res.json(info);
-          }
+        }
     })
 })
 
@@ -115,16 +120,12 @@ app.post('/post', uploadMiddleware.single('files'), async (req, res) => {
 
 app.get('/post', async (req, res) => {
     res.json(await Post.find()
-    .populate('author', ['username'])
-    .sort({createdAt: -1})
-    .limit(20))
+        .populate('author', ['username'])
+        .sort({ createdAt: -1 })
+        .limit(20))
 })
 
 app.get('/post/:id', async (req, res) => {
-    const postDetail = await Post.findOne({'_id': req.params.id}).populate('author', ['username'])
+    const postDetail = await Post.findOne({ '_id': req.params.id }).populate('author', ['username'])
     res.json(postDetail)
 })
-
-app.listen(PORT)
-
-console.log('listening to port 4000')
