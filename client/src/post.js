@@ -1,9 +1,15 @@
+import './App.css'
 import React from 'react'
 import { format } from 'date-fns'
 
-export default function Post({title, summary, content, cover, createdAt, author}) {
+function handleClick({_id}) {
+    console.table(_id)
+    window.location.href = "/post/" + _id
+}
+
+export default function Post({title, summary, content, cover, createdAt, author, _id}) {
     return (
-        <div className="post">
+        <div className="post" onClick={() => handleClick({_id})}>
             <div className="image">
                 <img alt="" src={"http://localhost:4000/"+cover}></img>
             </div> 
@@ -14,7 +20,7 @@ export default function Post({title, summary, content, cover, createdAt, author}
                     <time>{format(new Date(createdAt), 'MMM dd, yyyy HH:mm')}</time>
                 </p>
                 <h4 className="summary">{ summary }</h4>
-                { content }
+                <div className="post-body" dangerouslySetInnerHTML={{ __html: content }}></div>
             </div>
         </div>
     )
